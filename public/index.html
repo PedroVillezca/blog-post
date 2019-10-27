@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width">
+		<title>Blog Posts</title>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+		<script src="./_js/script.js"></script>
+	</head>
+	<body>
+		<div>
+			<h2>List of posts</h2>
+			<ul id="postList">
+			</ul>
+		</div>
+		<div>
+			<h2>Add new post</h2>
+			<form>
+				<fieldset>
+					<p>
+						<label for="tfTitle">Title:</label>
+						<input type="text" id="tfTitle">
+					</p>
+					<p>
+						<label for="tfContent">Content:</label>
+						<input type="text" id="tfContent">
+					</p>
+					<p>
+						<label for="tfAuthor">Author:</label>
+						<input type="text" id="tfAuthor">
+					</p>
+					<p>
+						<label for="inDate">Date:</label>
+						<input type="date" id="inDate">
+					</p>
+					<input type="submit" id="submitButton" value="Post"/>
+					<p hidden id="addErrorText"></p>
+				</fieldset>
+			</form>
+		</div>
+		<div>
+			<h2>Delete a post</h2>
+			<form>
+				<fieldset>
+					<p>
+						<label for="delID">ID:</label>
+						<input type="text" id="delID">
+					</p>
+					<input type="submit" id="deleteButton" value="Delete"/>
+					<p hidden id="deleteErrorText"></p>
+				</fieldset>
+			</form>
+		</div>
+		<div>
+			<h2>Update a post</h2>
+			<form>
+				<fieldset>
+					<p>
+						<label for="upID">ID:</label>
+						<input type="text" id="upID">
+					</p>
+					<p>
+						<label for="upTitle">Title:</label>
+						<input type="text" id="upTitle">
+					</p>
+					<p>
+						<label for="upContent">Content:</label>
+						<input type="text" id="upContent">
+					</p>
+					<p>
+						<label for="upAuthor">Author:</label>
+						<input type="text" id="upAuthor">
+					</p>
+					<p>
+						<label for="upDate">Date:</label>
+						<input type="date" id="upDate">
+					</p>
+					<input type="submit" id="updateButton" value="Update"/>
+					<p hidden id="updateErrorText"></p>
+				</fieldset>
+			</form>
+		</div>
+
+	</body>
+</html>
