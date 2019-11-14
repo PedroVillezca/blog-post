@@ -1,40 +1,32 @@
 let express = require("express")
 let morgan = require("morgan")
+let mongoose = require("mongoose")
 let bodyParser = require("body-parser")
 let uuidv4 = require("uuid/v4")
+let {PostList} = require('./blog-post-model')
+const {DATABASE_URL, PORT} = require('./config')
 
 let app = express()
 let jsonParser = bodyParser.json()
+mongoose.Promise = global.Promise
 
 app.use(express.static("public"))
 app.use(morgan("dev"))
 
-var posts = []
-posts.push({
-	id: uuidv4(),
-	title: "JQuery 101",
-	content: "JQuery is pretty cool",
-	author: "John Resig",
-	publishDate: '2019-10-23'
-})
-posts.push({
-	id: uuidv4(),
-	title: "JSON for Dummies",
-	content: "Actually I like XML better",
-	author: "JSON Boi",
-	publishDate: '2019-10-23'
-})
-
-
-// Listen
-app.listen('8080', () => {
-	console.log('App is running on port 8080')
-})
-
 // GET
 // Return all blog posts
 app.get('/blog-posts', (req, res, next) => {
-	return res.status(200).json(posts)
+	PostList.getAll()
+		.then(posts => {
+			return res.status(200).json(posts)
+		})
+		.catch(error => {
+			res.statusMessage = "Something went wrong."
+			return res.status(500).json({
+				status: 500,
+				message: "Something went wrong."
+			})
+		})
 })
 
 // Return blog posts by author
@@ -49,26 +41,25 @@ app.get('/blog-post', (req, res, next) => {
 		return res.status(406).json({message: "Author not provided"})
 	}
 
-	let found = false
-	let authorPosts = []
-	for (post of posts) {
-		if (post.author == author) {
-			authorPosts.push(post)
-			found = true
-		}
-	}
-
-	if (!found) {
-		res.statusMessage = "Author not found"
-		return res.status(404).json({
-			message: "Author not found",
-			status: 404
+	PostList.getAuthor(author)
+		.then(posts => {
+			if (posts) {
+				return res.status(200).json(posts)
+			} else {
+				res.statusMessage = "Author not found."
+				return res.status(404).json({
+					message: "Author not found.",
+					status: 404
+				})
+			}
 		})
-	}
-
-	console.log('Should be good')
-	return res.status(200).json(authorPosts)
-
+		.catch(error => {
+			res.statusMessage = "Something went wrong."
+			return res.status(500).json({
+				status: 500,
+				message: "Something went wrong."
+			})
+		})
 })
 
 // POST
@@ -77,8 +68,8 @@ app.post('/blog-posts', jsonParser, (req, res, next) => {
 	let content = req.body.content
 	let author = req.body.author
 	let publishDate = req.body.publishDate
-
-	req.body.id = uuidv4()
+	let id = uuidv4()
+	req.body.id = id
 	if (!title || !content || !author || !publishDate) {
 		res.statusMessage = "Missing field"
 		return res.status(406).json({
@@ -87,8 +78,24 @@ app.post('/blog-posts', jsonParser, (req, res, next) => {
 		})
 	}
 
-	posts.push(req.body)
-	return res.status(201).json(req.body)
+	let newPost = {
+		id,
+		title,
+		content,
+		author,
+		publishDate
+	}
+	PostList.post(newPost)
+		.then(post => {
+			return res.status(201).json(post)
+		})
+		.catch(error => {
+			res.statusMessage = "Something went wrong."
+			return res.status(500).json({
+				status: 500,
+				message: "Something went wrong."
+			})
+		})
 })
 
 // PUT
@@ -114,54 +121,102 @@ app.put('/blog-posts/:id', jsonParser, (req, res, next) => {
 		})
 	}
 
-	let found = -1
-	for (let i = 0; i < posts.length && found == -1; i++) {
-		if (original == posts[i].id) {
-			found = i
-		}
-	}
-
+	let thisPost = {}
 	let newTitle = newPost.title
 	let newContent = newPost.content
 	let newAuthor = newPost.author
 	let newDate = newPost.publishDate
 
+	thisPost.id = req.params.id
 	if (newTitle) {
-		posts[found].title = newTitle
+		thisPost.title = newTitle
 	}
 	if (newContent) {
-		posts[found].content = newContent
+		thisPost.content = newContent
 	}
 	if (newAuthor) {
-		posts[found].author = newAuthor
+		thisPost.author = newAuthor
 	}
 	if (newDate) {
-		posts[found].publishDate = newDate
+		thisPost.publishDate = newDate
 	}
-
-	return res.status(202).json(posts[found])
+	PostList.updatePost(thisPost)
+		.then(post => {
+			return res.status(202).json(post)
+		})
+		.catch(error => {
+			res.statusMessage = "Something went wrong."
+			return res.status(500).json({
+				status: 500,
+				message: "Something went wrong."
+			})
+		})
 })
 
 // DELETE
 app.delete('/blog-posts/:id', (req, res, next) => {
 	let id = req.params.id
 
-	let found = -1
-	for (let i = 0; i < posts.length && found == -1; i++) {
-		if (posts[i].id == id) {
-			found = i
-		}
-	}
-
-	if (found == -1) {
-		res.statusMessage = "Post not found"
-		return res.status(404).json({
-			message: "Post not found",
-			status: 404
+	PostList.deletePost(id)
+		.then(post => {
+			if (post) {
+				return res.status(200).json(post)
+			} else {
+				res.statusMessage = "Post not found"
+				return res.status(404).json({
+					message: "Post not found",
+					status: 404
+				})
+			}
 		})
-	}
-
-	let removed = posts[found]
-	posts.splice(found, 1)
-	return res.status(200).json(removed)
+		.catch(error => {
+			res.statusMessage = "Something went wrong."
+			return res.status(500).json({
+				status: 500,
+				message: "Something went wrong."
+			})
+		})
 })
+
+let server
+function runServer (port, databaseUrl) {
+	return new Promise( (resolve, reject) => {
+		mongoose.connect(databaseUrl, err => {
+			if (err) {
+				return reject(err)
+			} else {
+				server = app.listen(port, () => {
+					console.log('App is running on port ' + port)
+					resolve()
+				})
+				.on('error', err => {
+					mongoose.disconnect()
+					return reject(err)
+				})
+			}
+		})
+	})
+}
+
+function closeServer () {
+	return mongoose.disconnect()
+		.then(() => {
+			return new Promise( (resolve, reject) => {
+				console.log('Closing the server')
+				server.close(err => {
+					if (err) {
+						return reject(err)
+					} else {
+						resolve()
+					}
+				})
+			})
+		})
+}
+
+runServer(PORT, DATABASE_URL)
+	.catch(err => {
+		console.log(err)
+	})
+
+module.exports = {app, runServer, closeServer}
